@@ -149,3 +149,9 @@ main { flex: 1; min-width: 0; padding: 16px 20px; overflow: auto; }
 .toast.warn { border-left: 4px solid var(--warn); }
 .toast.err { border-left: 4px solid var(--err); }
 .toast.out { opacity: 0; transform: translateY(8px); }
+
+/* Q1：未对应人员 */
+.avatar-x { background: #eff0f1; color: #8f959e; }
+.tag-unmapped { display: inline-block; padding: 0 6px; border-radius: 4px; font-size: 11px; background: #fff3e8; color: #de7802; border: 1px solid #ffd8b0; margin-left: 2px; }
+/* Q7：手动同步结果显示至下一次手动同步 */
+.result-note { margin-left: auto; font-size: 12px; }

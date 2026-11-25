@@ -11,6 +11,7 @@
   const BACKUP_ID = 'fs_zz';    // 备份负责人
   const TABLE_ADMINS = ['fs_hhk', 'fs_zz']; // 表格管理员 / 负责人（可点“立即同步”）
   const MGMT_ACCESS = ['fs_hhk', 'fs_zz'];  // 管理表格可访问
+  const SEND_FAIL_TARGET = 'fs_wf';         // 演示发送失败的对象：王芳
   const CATEGORY_LABEL = { todo: '待办', inprogress: '进行中', done: '完成' };
   const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
 
@@ -21,7 +22,8 @@
     view: 'mine',
     mgmtTab: 'exclude',
     date: '2026-11-25',
-    failMode: 'none',          // none | retryOk | fail
+    failMode: 'none',          // 下次同步：none | retryOk | fail
+    sendFail: 'none',          // 17:00 发送给王芳：none | retryOk | fail（演示 Q4 发送重试）
     jira: clone(M.issues),
     mgmt: clone(M.mgmt),
     table: [],                 // 主表格：仅未完成任务
@@ -37,18 +39,24 @@
   const jiraUser = (acc) => M.jiraUsers.find((u) => u.acc === acc) || { acc, name: acc, email: '' };
   const fsUser = (id) => M.feishuUsers.find((u) => u.id === id);
   const fmtShort = (dt) => (dt ? dt.slice(5) : '—');
+  // Q1：按飞书人员展示；对应不上的显示 Jira 姓名并标注“未对应”
+  const personName = (acc) => { const f = jiraToFeishu(acc); return f ? f.name : jiraUser(acc).name; };
+  const personHtml = (acc) => { const f = jiraToFeishu(acc); const n = f ? f.name : jiraUser(acc).name;
+    return `<span class="avatar ${f ? '' : 'avatar-x'}">${esc(n.slice(-1))}</span>${esc(n)}${f ? '' : ' <span class="tag-unmapped" title="Jira 账号未能对应到飞书人员">未对应</span>'}`; };
   const dateLabel = (d) => {
     const dt = new Date(d + 'T00:00:00');
     return `${d}（周${WEEK[dt.getDay()]}）`;
   };
 
+  const yearEntered = (y) => S.mgmt.holidays.some((x) => x.date.slice(0, 4) === String(y));
   function dayInfo(d) {
     const h = S.mgmt.holidays.find((x) => x.date === d);
     const wd = new Date(d + 'T00:00:00').getDay();
+    const missing = !yearEntered(d.slice(0, 4)) ? '（该年日历未录入，按周一至周五判断）' : '';
     if (h && h.type === 'holiday') return { work: false, label: '法定节假日 · ' + h.name };
     if (h && h.type === 'makeup') return { work: true, label: '调休补班日 · ' + h.name };
-    if (wd === 0 || wd === 6) return { work: false, label: '周末' };
-    return { work: true, label: '工作日' };
+    if (wd === 0 || wd === 6) return { work: false, label: '周末' + missing };
+    return { work: true, label: '工作日' + missing };
   }
 
   // R3：默认按公司邮箱对应；对不上时查例外对应表
@@ -72,8 +80,10 @@
   }
 
   function pushMsg(fsId, msg) {
-    (S.inbox[fsId] = S.inbox[fsId] || []).push(msg);
+    (S.inbox[fsId] = S.inbox[fsId] || []).push(clone(msg));
   }
+  // Q3：异常通知同时私聊运维负责人与备份负责人
+  function pushAlert(msg) { pushMsg(OPS_ID, msg); pushMsg(BACKUP_ID, msg); }
 
   /* ---------------- 业务逻辑 ---------------- */
 
@@ -85,13 +95,13 @@
     const failed = attempts >= 2;
 
     if (failed) {
-      pushMsg(OPS_ID, {
+      pushAlert({
         kind: 'alert', at,
         title: '同步失败通知',
-        body: `${trigger}（${at}）同步失败，已自动重试 1 次仍失败。\n原因：无法访问 Jira（模拟）。\n主表格保持上一次成功同步的数据（截至 ${fmtShort(S.lastSync)}）。\n运维负责人不在时，请备份负责人朱卓接替处理。`
+        body: `${trigger}（${at}）同步失败，已自动重试 1 次仍失败。\n原因：无法访问 Jira（模拟）。\n主表格保持上一次成功同步的数据（截至 ${fmtShort(S.lastSync)}）。\n由运维负责人胡桓康处理；其不在时由备份负责人朱卓接替。`
       });
       if (trigger === '手动同步') S.manualResult = { at, ok: false, count: 0 };
-      if (!silent) toast(`${trigger}失败（已重试 1 次），已私聊通知运维负责人`, 'err');
+      if (!silent) toast(`${trigger}失败（已重试 1 次），已私聊通知运维负责人与备份负责人`, 'err');
       return false;
     }
 
@@ -120,6 +130,19 @@
     return true;
   }
 
+  // Q6/Q8：每年 12 月 1 日起，每周一 09:00 检查次年日历是否已录入
+  function calendarCheck() {
+    const dt = new Date(S.date + 'T00:00:00');
+    if (dt.getMonth() !== 11 || dt.getDay() !== 1) return;
+    const next = dt.getFullYear() + 1;
+    if (yearEntered(next)) return;
+    const k = `${S.date}|calendar`;
+    if (S.ran[k]) return; S.ran[k] = true;
+    pushAlert({ kind: 'alert', at: `${S.date} 09:00`, title: '请录入次年节假日日历',
+      body: `管理表格中尚未录入 ${next} 年的法定节假日与调休补班安排。\n未录入期间将按“周一至周五为工作日”判断，可能导致节假日误发提醒、调休补班日漏发。\n请在管理表格「节假日日历」中录入；录入后不再提醒（每周一 09:00 检查）。` });
+    toast(`年底日历检查：${next} 年日历未录入，已提醒运维负责人与备份负责人`, 'warn');
+  }
+
   // F2.1：定时同步，仅法定工作日
   function scheduledSync(time) {
     const di = dayInfo(S.date);
@@ -138,7 +161,7 @@
     const byAcc = {};
     S.table.forEach((r) => { (byAcc[r.assignee] = byAcc[r.assignee] || []).push(r); });
 
-    let sent = 0, skipped = 0;
+    let sent = 0, skipped = 0, retried = 0;
     const undelivered = [];
     Object.keys(byAcc).forEach((acc) => {
       if (excluded.has(acc)) return;
@@ -148,20 +171,27 @@
       if (fu.status !== 'active') { undelivered.push({ name: ju.name, acc, reason: '飞书账号已停用 / 已离职' }); return; }
       const k = `${S.date}|${fu.id}`;
       if (S.sent[k]) { skipped++; return; }
+      // Q4：发送出错自动重试 1 次，仍失败才计入未送达（演示：对王芳模拟发送出错）
+      if (fu.id === SEND_FAIL_TARGET && S.sendFail !== 'none') {
+        const mode = S.sendFail; S.sendFail = 'none'; syncSendFailSelect();
+        if (mode === 'fail') { undelivered.push({ name: fu.name, acc, reason: '发送出错（已自动重试 1 次仍失败）' }); return; }
+        retried++;
+      }
       S.sent[k] = true;
       pushMsg(fu.id, { kind: 'remind', at, dataAt: S.lastSync, items: byAcc[acc].map((r) => r.key), snapshot: clone(byAcc[acc]) });
       sent++;
     });
 
     if (undelivered.length) {
-      pushMsg(OPS_ID, {
+      pushAlert({
         kind: 'alert', at, title: '提醒未送达汇总',
         body: `今日 17:00 提醒有 ${undelivered.length} 人未送达：\n` + undelivered.map((u) => `· ${u.name}（Jira：${u.acc}）：${u.reason}`).join('\n') + '\n可在管理表格的「例外对应表 / 排除名单」中处理。'
       });
     }
     let t = `17:00 提醒：已私聊 ${sent} 人`;
-    if (undelivered.length) t += `，${undelivered.length} 人未送达（已汇总给运维负责人）`;
+    if (undelivered.length) t += `，${undelivered.length} 人未送达（已汇总给运维负责人与备份负责人）`;
     if (skipped) t += `，${skipped} 人今日已提醒过`;
+    if (retried) t += `（${retried} 人首次发送出错，重试成功）`;
     if (!sent && !undelivered.length && !skipped) t = '17:00 提醒：没有需要提醒的人';
     toast(t, undelivered.length ? 'warn' : 'ok');
   }
@@ -184,6 +214,7 @@
   }
 
   function syncFailSelect() { const s = $('#failMode'); if (s) s.value = S.failMode; }
+  function syncSendFailSelect() { const s = $('#sendFail'); if (s) s.value = S.sendFail; }
 
   /* ---------------- 渲染：主表格 ---------------- */
   const VIEWS = [
@@ -203,7 +234,7 @@
     switch (k) {
       case 'key': return `<a href="#" class="jira-link" data-key="${esc(r.key)}">${esc(r.key)}</a>`;
       case 'type': return `<span class="tag tag-${r.type.toLowerCase()}">${esc(r.type)}</span>`;
-      case 'assignee': case 'reporter': return `<span class="avatar">${esc(jiraUser(r[k]).name.slice(-1))}</span>${esc(jiraUser(r[k]).name)}`;
+      case 'assignee': case 'reporter': return personHtml(r[k]);
       case 'category': return `<span class="pill ${r.category === 'todo' ? 'pill-gray' : 'pill-blue'}">${CATEGORY_LABEL[r.category]}</span>`;
       case 'status': return `<span class="status">${esc(r.status)}</span>`;
       case 'priority': return `<span class="prio prio-${esc(r.priority)}">${esc(r.priority)}</span>`;
@@ -236,25 +267,25 @@
       const mine = rows.filter((r) => { const f = jiraToFeishu(r.assignee); return f && f.id === S.role; });
       body = `<div class="view-hint">当前查看者：<b>${esc(me.name)}</b>，仅显示你作为经办人的未完成任务（共 ${mine.length} 条）。这是 17:00 提醒消息中"查看全部"链接打开的视图。</div>` + gridHtml(mine);
     } else if (S.view === 'byAssignee') {
-      body = grouped(rows, (r) => r.assignee, (k) => '经办人：' + jiraUser(k).name);
+      body = grouped(rows, (r) => r.assignee, (k) => '经办人：' + personName(k) + (jiraToFeishu(k) ? '' : '（未对应）'));
     } else if (S.view === 'byProject') {
       body = grouped(rows, (r) => r.project, (k) => '项目：' + k);
     } else if (S.view === 'byReporter') {
-      body = grouped(rows, (r) => r.reporter, (k) => '报告人：' + jiraUser(k).name);
+      body = grouped(rows, (r) => r.reporter, (k) => '报告人：' + personName(k) + (jiraToFeishu(k) ? '' : '（未对应）'));
     } else {
       body = `<div class="kanban">${['todo', 'inprogress'].map((c) => {
         const list = rows.filter((r) => r.category === c);
         return `<div class="col"><div class="col-h">${CATEGORY_LABEL[c]}<span class="count">${list.length}</span></div>${list.map((r) => `
           <div class="card"><div class="card-top"><a href="#" class="jira-link" data-key="${esc(r.key)}">${esc(r.key)}</a><span class="tag tag-${r.type.toLowerCase()}">${r.type}</span></div>
           <div class="card-title">${esc(r.title)}</div>
-          <div class="card-meta"><span class="avatar">${esc(jiraUser(r.assignee).name.slice(-1))}</span>${esc(jiraUser(r.assignee).name)} · ${esc(r.status)}</div></div>`).join('') || '<div class="empty small">无</div>'}</div>`;
+          <div class="card-meta">${personHtml(r.assignee)} · ${esc(r.status)}</div></div>`).join('') || '<div class="empty small">无</div>'}</div>`;
       }).join('')}</div>`;
     }
 
     const mr = S.manualResult;
     const resultBar = mr ? `<div class="result ${mr.ok ? 'ok' : 'err'}">${mr.ok
-      ? `手动同步完成 · ${fmtShort(mr.at)} · 同步 ${mr.count} 条 · 成功${mr.retried ? '（首次失败，重试成功）' : ''}`
-      : `手动同步失败 · ${fmtShort(mr.at)} · 已重试 1 次，已通知运维负责人；表格保持上次成功同步的数据`}<button class="x" data-act="closeResult">×</button></div>` : '';
+      ? `【手动同步】完成 · ${fmtShort(mr.at)} · 同步 ${mr.count} 条 · 成功${mr.retried ? '（首次失败，重试成功）' : ''}`
+      : `【手动同步】失败 · ${fmtShort(mr.at)} · 已重试 1 次，已通知运维负责人与备份负责人；表格保持上次成功同步的数据`}<span class="muted result-note">显示至下一次手动同步</span></div>` : '';
 
     $('#main').innerHTML = `
       <div class="doc-head">
@@ -359,7 +390,10 @@
         <select id="mapFs">${M.feishuUsers.map((u) => `<option value="${u.id}">${esc(u.name)}（${esc(u.email)}）</option>`).join('')}</select>
         <input id="mapNote" placeholder="备注（选填）"><button class="btn btn-primary" data-act="addMap">＋ 添加</button></div>`;
     } else {
-      body = `<p class="muted">用于判断法定工作日：<b>法定节假日</b>不定时同步、不发提醒；<b>调休补班日</b>照常执行。以下为示例数据，正式使用需按国务院公布的安排录入。</p>
+      const y0 = +S.date.slice(0, 4);
+      const yrs = [y0, y0 + 1].map((y) => `${y} 年：${yearEntered(y) ? '✅ 已录入' : '⚠️ 未录入（按周一至周五判断）'}`).join('　｜　');
+      body = `<p class="muted">用于判断法定工作日：<b>法定节假日</b>不定时同步、不发提醒；<b>调休补班日</b>照常执行；<b>未录入的年份</b>按周一至周五判断。每年 12 月 1 日起，每周一 09:00 检查次年日历，未录入会提醒运维负责人与备份负责人。以下为示例数据，正式使用需按国务院公布的安排录入。</p>
+        <div class="callout">${yrs}</div>
         <table class="grid edit"><thead><tr><th>日期</th><th>类型</th><th>名称</th><th></th></tr></thead><tbody>
         ${S.mgmt.holidays.slice().sort((a, b) => a.date.localeCompare(b.date)).map((h) => `<tr><td>${esc(dateLabel(h.date))}</td><td><span class="pill ${h.type === 'holiday' ? 'pill-gray' : 'pill-ok'}">${h.type === 'holiday' ? '法定节假日' : '调休补班'}</span></td><td>${esc(h.name)}</td><td><button class="link danger" data-del="holidays" data-date="${h.date}">删除</button></td></tr>`).join('')}
         </tbody></table>
@@ -429,7 +463,8 @@
     if (t.dataset.mtab) { S.mgmtTab = t.dataset.mtab; return render(); }
     if (t.dataset.run) {
       const r = t.dataset.run;
-      if (r === 'all') { scheduledSync('09:00'); scheduledSync('16:50'); sendReminders(); }
+      if (r === 'all') { calendarCheck(); scheduledSync('09:00'); scheduledSync('16:50'); sendReminders(); }
+      else if (r === '09:00') { calendarCheck(); scheduledSync('09:00'); }
       else if (r === '17:00') sendReminders();
       else scheduledSync(r);
       return render();
@@ -479,6 +514,7 @@
     const t = e.target;
     if (t.id === 'role') { S.role = t.value; return render(); }
     if (t.id === 'date') { if (t.value) S.date = t.value; return render(); }
+    if (t.id === 'sendFail') { S.sendFail = t.value; toast(t.value === 'none' ? '已恢复正常' : '下一次 17:00 发送给王芳时将模拟出错', 'warn'); return; }
     if (t.id === 'failMode') { S.failMode = t.value; toast(t.value === 'none' ? '已恢复正常' : '下一次同步将模拟失败', 'warn'); return; }
     if (t.dataset.edit) {
       const i = S.jira.find((x) => x.key === t.dataset.key);
