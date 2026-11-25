@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QD助手 · Jira 未完成任务提醒 —— 可交互原型</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- 原型控制台：模拟身份与时间（非产品功能） -->
+  <header class="console">
+    <div class="brand"><span class="logo">QD</span><b>QD助手</b><span class="muted">可交互原型 · 模拟数据</span></div>
+    <label>当前身份 <select id="role"></select></label>
+    <label>模拟日期 <input type="date" id="date"></label>
+    <span id="dayInfo"></span>
+    <button class="btn" data-act="nextDay">下一天 ›</button>
+    <span class="sep"></span>
+    <button class="btn run" data-run="09:00">▶ 09:00 定时同步</button>
+    <button class="btn run" data-run="16:50">▶ 16:50 定时同步</button>
+    <button class="btn run" data-run="17:00">▶ 17:00 发送提醒</button>
+    <button class="btn" data-run="all">⏩ 跑完今天</button>
+    <label>下次同步 <select id="failMode">
+      <option value="none">正常</option>
+      <option value="retryOk">首次失败，重试成功</option>
+      <option value="fail">失败（重试后仍失败）</option>
+    </select></label>
+    <button class="btn" data-act="reset" title="恢复初始数据">↺ 重置</button>
+  </header>
+
+  <div class="layout">
+    <nav class="nav">
+      <button data-tab="table">📊 主表格</button>
+      <button data-tab="inbox">💬 飞书消息 <span id="unread" class="badge"></span></button>
+      <button data-tab="mgmt">⚙️ 管理表格</button>
+      <div class="nav-sep"></div>
+      <button data-tab="jira">🧪 模拟 Jira</button>
+      <div class="nav-foot">
+        <p><b>演示建议</b></p>
+        <ol>
+          <li>点「▶ 17:00 发送提醒」，到「飞书消息」看提醒。</li>
+          <li>切换身份为胡桓康，查看"未送达汇总"。</li>
+          <li>在「管理表格 › 例外对应表」把陈晨对应上，次日再提醒。</li>
+          <li>在「模拟 Jira」把任务改为已解决，再「立即同步」。</li>
+          <li>把下次同步设为"失败"，再跑 16:50 和 17:00。</li>
+          <li>把日期改到周末或示例节假日试试。</li>
+        </ol>
+      </div>
+    </nav>
+    <main id="main"></main>
+  </div>
+
+  <div id="modal" class="modal"></div>
+  <div id="toasts" class="toasts"></div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
