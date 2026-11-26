@@ -2,7 +2,8 @@
  * 原型模拟数据（全部为虚构示例，非真实 Jira / 飞书数据）
  * - 邮箱统一使用 example.com，避免与真实账号混淆
  * - 节假日日历为示例，正式使用需按国务院公布的安排录入
- * - Jira 类型名与状态名节选自 2026-11-26 实测的 VERA2506M 项目（见 docs/design/03.数据格式设计.md 4.4）
+ * - Jira 类型名与状态名节选自 2026-11-26 实测数据（见 docs/design/03.数据格式设计.md 4.4、05.技术验证与依赖检查.md 2.3）
+ * - 同步范围按看板 22909（05 D1）：VERA 项目的 Story / 任务 + BUGA 项目的 Bug（软件测试），经办人须属于 4 个用户组（未分配不在范围内）
  */
 window.MOCK = {
   // 飞书通讯录（提醒的接收方）
@@ -30,9 +31,9 @@ window.MOCK = {
   jiraTypes: [
     { name: 'Story',           table: 'Story', wf: 'story' },
     { name: '任务',            table: 'Task',  wf: 'task' },
-    { name: 'Bug（软件测试）', table: 'Bug',   wf: 'bug' },
-    { name: 'BUG（实验室）',   table: 'Bug',   wf: 'bug' },
-    { name: 'BUG（硬件测试）', table: 'Bug',   wf: 'bug' },
+    { name: 'Bug（软件测试）', table: 'Bug',   wf: 'buga' },   // D1：看板仅含此 Bug 类型，位于 BUGA 项目
+    { name: 'BUG（实验室）',   table: null,    wf: 'bug' },    // D1：不在看板范围
+    { name: 'BUG（硬件测试）', table: null,    wf: 'bug' },    // D1：不在看板范围
     { name: 'Fix',             table: null,    wf: 'fix' },
     { name: '子任务',          table: null,    wf: 'task' }
   ],
@@ -54,13 +55,19 @@ window.MOCK = {
       { name: '处理中', category: 'inprogress' }, { name: 'duplicate', category: 'inprogress' }, { name: '联调测试', category: 'inprogress' },
       { name: '已解决', category: 'done' }, { name: 'close', category: 'done' }, { name: '无法解决', category: 'done' }
     ],
+    // D2：BUGA 项目的 Bug（软件测试）走与 Fix 相同的流程；"待提交"为待办类，照 Jira 类别提醒（05 Q-D2）
+    buga: [
+      { name: '待提交', category: 'todo' }, { name: '测试问题审核人审核中', category: 'inprogress' }, { name: '代码审核中', category: 'inprogress' },
+      { name: '回归测试中', category: 'inprogress' }, { name: '待产品确认', category: 'inprogress' },
+      { name: '完成', category: 'done' }, { name: '问题挂起中', category: 'done' }, { name: '超期单搁置', category: 'done' }
+    ],
     fix: [
       { name: '待提交', category: 'todo' }, { name: '开发中', category: 'inprogress' }, { name: '回归测试中', category: 'inprogress' },
       { name: '完成', category: 'done' }, { name: '问题挂起中', category: 'done' }
     ]
   },
 
-  projects: ['VERA2506M', 'VERA2507A'],
+  projects: ['VERA2506M', 'VERA2507M', 'BUGA2506M', 'BUGA2507M'],
   priorities: ['最高', '高', '中', '低'],
 
   // Jira Issue（jiraType 为 Jira 类型名；assignee 为 null 表示未分配；inBoard=false 表示不在看板 22909 范围内）
@@ -76,20 +83,20 @@ window.MOCK = {
     { key: 'VERA2506M-325', title: '首页卡片子任务：图标替换', jiraType: '子任务', project: 'VERA2506M', assignee: 'huhk', reporter: 'huhk', status: '开发中', priority: '低', created: '2026-11-05 09:00', updated: '2026-11-20 09:00', inBoard: true },
 
     { key: 'VERA2506M-288', title: '机器人状态卡片动效', jiraType: 'Story', project: 'VERA2506M', assignee: 'liming', reporter: 'zhuzhuo', status: 'Story开发中', priority: '高', created: '2026-11-05 10:00', updated: '2026-11-24 19:12', inBoard: true },
-    { key: 'VERA2506M-330', title: '首页卡片点击无响应', jiraType: 'Bug（软件测试）', project: 'VERA2506M', assignee: 'liming', reporter: 'wangfang', status: '重新打开', priority: '最高', created: '2026-11-14 13:22', updated: '2026-11-24 15:40', inBoard: true },
-    { key: 'VERA2506M-334', title: '横屏时底部导航遮挡', jiraType: 'Bug（软件测试）', project: 'VERA2506M', assignee: 'liming', reporter: 'wangfang', status: 'duplicate', priority: '中', created: '2026-11-18 16:05', updated: '2026-11-18 16:05', inBoard: true },
-    { key: 'VERA2506M-339', title: '深色模式下文字看不清', jiraType: 'Bug（软件测试）', project: 'VERA2506M', assignee: 'liming', reporter: 'wangfang', status: '已解决', priority: '中', created: '2026-11-19 10:41', updated: '2026-11-24 17:20', inBoard: true },
-    { key: 'VERA2506M-342', title: '充电指示灯异常闪烁', jiraType: 'BUG（硬件测试）', project: 'VERA2506M', assignee: 'liming', reporter: 'wangfang', status: '处理中', priority: '高', created: '2026-11-20 11:30', updated: '2026-11-24 09:10', inBoard: true },
+    { key: 'BUGA2506M-130', title: '首页卡片点击无响应', jiraType: 'Bug（软件测试）', project: 'BUGA2506M', assignee: 'liming', reporter: 'wangfang', status: '测试问题审核人审核中', priority: '最高', created: '2026-11-14 13:22', updated: '2026-11-24 15:40', inBoard: true },
+    { key: 'BUGA2506M-134', title: '横屏时底部导航遮挡', jiraType: 'Bug（软件测试）', project: 'BUGA2506M', assignee: 'liming', reporter: 'wangfang', status: '待提交', priority: '中', created: '2026-11-18 16:05', updated: '2026-11-18 16:05', inBoard: true },
+    { key: 'BUGA2506M-139', title: '深色模式下文字看不清', jiraType: 'Bug（软件测试）', project: 'BUGA2506M', assignee: 'liming', reporter: 'wangfang', status: '完成', priority: '中', created: '2026-11-19 10:41', updated: '2026-11-24 17:20', inBoard: true },
+    { key: 'VERA2506M-342', title: '充电指示灯异常闪烁（硬件 Bug，不在看板）', jiraType: 'BUG（硬件测试）', project: 'VERA2506M', assignee: 'liming', reporter: 'wangfang', status: '处理中', priority: '高', created: '2026-11-20 11:30', updated: '2026-11-24 09:10', inBoard: true },
     { key: 'VERA2506M-345', title: '登录接口偶发超时（Fix 单）', jiraType: 'Fix', project: 'VERA2506M', assignee: 'liming', reporter: 'wangfang', status: '开发中', priority: '中', created: '2026-11-21 10:00', updated: '2026-11-24 10:00', inBoard: true },
 
-    { key: 'VERA2507A-012', title: '回归测试用例整理', jiraType: '任务', project: 'VERA2507A', assignee: 'wangfang', reporter: 'zhuzhuo', status: '代码审核中', priority: '中', created: '2026-11-06 09:30', updated: '2026-11-24 11:00', inBoard: true },
-    { key: 'VERA2507A-018', title: '配网失败率统计', jiraType: '任务', project: 'VERA2507A', assignee: 'wangfang', reporter: 'zhuzhuo', status: '待办', priority: '低', created: '2026-11-20 14:00', updated: '2026-11-20 14:00', inBoard: true },
+    { key: 'VERA2507M-012', title: '回归测试用例整理', jiraType: '任务', project: 'VERA2507M', assignee: 'wangfang', reporter: 'zhuzhuo', status: '代码审核中', priority: '中', created: '2026-11-06 09:30', updated: '2026-11-24 11:00', inBoard: true },
+    { key: 'VERA2507M-018', title: '配网失败率统计', jiraType: '任务', project: 'VERA2507M', assignee: 'wangfang', reporter: 'zhuzhuo', status: '待办', priority: '低', created: '2026-11-20 14:00', updated: '2026-11-20 14:00', inBoard: true },
 
-    { key: 'VERA2507A-021', title: '蓝牙配网重试机制', jiraType: 'Story', project: 'VERA2507A', assignee: 'chenchen', reporter: 'zhuzhuo', status: 'Story开发中', priority: '高', created: '2026-11-03 10:20', updated: '2026-11-23 18:00', inBoard: true },
-    { key: 'VERA2507A-025', title: '配网页面闪退', jiraType: 'BUG（实验室）', project: 'VERA2507A', assignee: 'chenchen', reporter: 'wangfang', status: '开放', priority: '最高', created: '2026-11-21 09:15', updated: '2026-11-21 09:15', inBoard: true },
+    { key: 'VERA2507M-021', title: '蓝牙配网重试机制', jiraType: 'Story', project: 'VERA2507M', assignee: 'chenchen', reporter: 'zhuzhuo', status: 'Story开发中', priority: '高', created: '2026-11-03 10:20', updated: '2026-11-23 18:00', inBoard: true },
+    { key: 'BUGA2507M-025', title: '配网页面闪退', jiraType: 'Bug（软件测试）', project: 'BUGA2507M', assignee: 'chenchen', reporter: 'wangfang', status: '待提交', priority: '最高', created: '2026-11-21 09:15', updated: '2026-11-21 09:15', inBoard: true },
 
-    { key: 'VERA2507A-030', title: '第三方地图 SDK 评估', jiraType: '任务', project: 'VERA2507A', assignee: 'zhaolei', reporter: 'zhuzhuo', status: '开发中', priority: '中', created: '2026-11-11 10:00', updated: '2026-11-22 10:00', inBoard: true },
-    { key: 'VERA2507A-033', title: '配网引导文案优化（尚未分配）', jiraType: 'Story', project: 'VERA2507A', assignee: null, reporter: 'zhuzhuo', status: 'backlog', priority: '中', created: '2026-11-23 15:00', updated: '2026-11-23 15:00', inBoard: true },
+    { key: 'VERA2507M-030', title: '第三方地图 SDK 评估', jiraType: '任务', project: 'VERA2507M', assignee: 'zhaolei', reporter: 'zhuzhuo', status: '开发中', priority: '中', created: '2026-11-11 10:00', updated: '2026-11-22 10:00', inBoard: true },
+    { key: 'VERA2507M-033', title: '配网引导文案优化（尚未分配，不在看板范围）', jiraType: 'Story', project: 'VERA2507M', assignee: null, reporter: 'zhuzhuo', status: 'backlog', priority: '中', created: '2026-11-23 15:00', updated: '2026-11-23 15:00', inBoard: true },
 
     { key: 'VERA2506M-240', title: '历史遗留：推送证书更新', jiraType: '任务', project: 'VERA2506M', assignee: 'sunwei', reporter: 'zhuzhuo', status: '待办', priority: '中', created: '2026-09-20 10:00', updated: '2026-10-30 10:00', inBoard: true },
 

@@ -9,7 +9,7 @@
 
   const OPS_ID = 'fs_hhk';      // 运维负责人
   const BACKUP_ID = 'fs_zz';    // 备份负责人
-  const TABLE_ADMINS = ['fs_hhk', 'fs_zz']; // 表格管理员 / 负责人（可点“立即同步”）
+  const FULL_ACCESS = ['fs_hhk', 'fs_zz'];  // V1 / 03 §2.5：负责人 / TPM / 表格管理员可看全部记录；其他人（阅读者）仅见本人记录
   const MGMT_ACCESS = ['fs_hhk', 'fs_zz'];  // 管理表格可访问
   const SEND_FAIL_TARGET = 'fs_wf';         // 演示发送失败的对象：王芳
   const CATEGORY_LABEL = { todo: '待办', inprogress: '进行中', done: '完成' };
@@ -75,6 +75,13 @@
     return null;
   }
 
+  // 03 §2.5：主表格开启高级权限，阅读者的记录条件为"经办人 包含 访问者本人"，作用于所有视图与仪表盘统计
+  const canSeeAll = () => FULL_ACCESS.includes(S.role);
+  function visibleRows() {
+    if (canSeeAll()) return S.table.slice();
+    return S.table.filter((r) => { const f = jiraToFeishu(r.assignee); return f && f.id === S.role; });
+  }
+
   function toast(text, kind) {
     const box = $('#toasts');
     const el = document.createElement('div');
@@ -114,7 +121,8 @@
     const map = new Map();
     S.jira.forEach((i) => {
       const tableType = jtype(i.jiraType).table;   // 03 Q4：Fix、子任务等不入表
-      if (i.deleted || !i.inBoard || !tableType || catOf(i.jiraType, i.status) === 'done') return;
+      // D1：看板要求经办人属于 4 个用户组，未分配任务不在范围内
+      if (i.deleted || !i.inBoard || !i.assignee || !tableType || catOf(i.jiraType, i.status) === 'done') return;
       map.set(i.key, {
         key: i.key, title: i.title, type: tableType, project: i.project,
         assignee: i.assignee, reporter: i.reporter, status: i.status,
@@ -205,7 +213,7 @@
   /* ---------------- 渲染：顶部 ---------------- */
   function renderTop() {
     const sel = $('#role');
-    sel.innerHTML = M.feishuUsers.map((u) => `<option value="${u.id}" ${u.id === S.role ? 'selected' : ''}>${esc(u.name)} · ${esc(u.roles.join(' / '))}</option>`).join('');
+    sel.innerHTML = M.feishuUsers.map((u) => `<option value="${u.id}" ${u.id === S.role ? 'selected' : ''}>${esc(u.name)} · ${esc(u.roles.join(' / '))} · ${FULL_ACCESS.includes(u.id) ? '可看全部记录' : '仅见本人记录'}</option>`).join('');
     $('#date').value = S.date;
     const di = dayInfo(S.date);
     $('#dayInfo').innerHTML = `<span class="pill ${di.work ? 'pill-ok' : 'pill-gray'}">${esc(di.label)}</span>`;
@@ -269,12 +277,14 @@
 
   function renderTable() {
     const me = fsUser(S.role);
-    const admin = TABLE_ADMINS.includes(S.role);
-    const rows = S.table.slice().sort((a, b) => a.created.localeCompare(b.created));
+    const full = canSeeAll();
+    const rows = visibleRows().sort((a, b) => a.created.localeCompare(b.created));
     let body = '';
     if (S.view === 'mine') {
-      const mine = rows.filter((r) => { const f = jiraToFeishu(r.assignee); return f && f.id === S.role; });
-      body = `<div class="view-hint">当前查看者：<b>${esc(me.name)}</b>，仅显示你作为经办人的未完成任务（共 ${mine.length} 条）。这是 17:00 提醒消息中"查看全部"链接打开的视图。</div>` + gridHtml(mine);
+      // V1：视图筛选不支持"当前用户"，本视图不设筛选，由高级权限限定阅读者只看到本人记录
+      body = `<div class="view-hint">${full
+        ? `当前查看者：<b>${esc(me.name)}</b>（负责人 / 表格管理员，高级权限下<b>可看全部记录</b>）。本视图不设筛选，显示全部 ${rows.length} 条；查看本人任务请用「按人员查看」。`
+        : `当前查看者：<b>${esc(me.name)}</b>（阅读者）。高级权限限定你只能看到自己作为经办人的记录（共 ${rows.length} 条），其他视图同样如此。这是 17:00 提醒消息中"查看全部"链接打开的视图。`}</div>` + gridHtml(rows);
     } else if (S.view === 'byAssignee') {
       body = grouped(rows, (r) => assigneeDisp(r.assignee), (k) => '经办人：' + k);
     } else if (S.view === 'byProject') {
@@ -293,7 +303,7 @@
 
     $('#main').innerHTML = mainHead() + `
       <div class="views">${VIEWS.map((v) => `<button class="${S.view === v.id ? 'active' : ''}" data-view="${v.id}">${v.name}</button>`).join('')}
-        <div class="spacer"></div><span class="muted">共 ${S.table.length} 条未完成任务 · 13 个字段</span></div>
+        <div class="spacer"></div><span class="muted">${full ? `共 ${rows.length} 条未完成任务` : `你可见 ${rows.length} 条（仅本人）`} · 13 个字段</span></div>
       <div class="view-body">${body}</div>`;
   }
 
@@ -306,6 +316,7 @@
           <h1>QD助手 · Jira 未完成任务</h1>
           <span class="pill pill-gray">🔒 只读 · 数据来自 Jira 看板 22909</span>
           <span class="pill pill-gray">所有者：朱卓</span>
+          <span class="pill ${canSeeAll() ? 'pill-blue' : 'pill-gray'}" title="高级权限：阅读者仅能看到经办人为本人的记录">🔐 ${canSeeAll() ? '你可看全部记录' : '你仅能看到本人记录'}</span>
         </div>
         <div class="subtabs">
           <button class="${S.mainPage === 'table' ? 'active' : ''}" data-mpage="table">📋 数据表：未完成任务</button>
@@ -316,32 +327,34 @@
 
   // 03 Q2 方案 D：仪表盘 = 立即同步按钮组件 + 最后同步时间 / 未完成任务数统计组件 + 使用说明文本组件
   function renderDash() {
-    const admin = TABLE_ADMINS.includes(S.role);
-    const latest = S.table.reduce((m, r) => (r.synced > m ? r.synced : m), '');
+    // 统计组件同样受高级权限限制：阅读者只统计本人记录；本人无记录时最后同步时间为空
+    const rows = visibleRows();
+    const full = canSeeAll();
+    const latest = rows.reduce((m, r) => (r.synced > m ? r.synced : m), '');
     $('#main').innerHTML = mainHead() + `
       <div class="dash">
         <div class="widget widget-btn">
           <div class="widget-h">按钮组件</div>
-          <button class="btn btn-lg ${admin ? 'btn-primary' : 'btn-disabled'}" data-act="manualSync" title="${admin ? '立即从 Jira 同步（只更新表格，不发送提醒）' : '按钮可选范围仅限朱卓、胡桓康'}">⟳ 立即同步</button>
-          <div class="muted small">${admin ? '点击后从 Jira 同步，只更新表格，不发送提醒；失败时通知运维负责人与备份负责人' : '可选范围仅限朱卓、胡桓康（⚠️ V2 待验证）'}</div>
+          <button class="btn btn-lg btn-primary" data-act="manualSync" title="立即从 Jira 同步（只更新表格，不发送提醒）">⟳ 立即同步</button>
+          <div class="muted small">所有人可用（需求 v1.5）。点击后从 Jira 同步，只更新表格，不发送提醒；同步进行中再次点击会被忽略；失败时通知运维负责人与备份负责人</div>
         </div>
         <div class="widget widget-stat">
           <div class="widget-h">统计组件 · 最后同步时间</div>
           <div class="stat">${latest ? esc(fmtShort(latest)) : '—'}</div>
-          <div class="muted small">取"最后同步时间"字段的最大值；点击立即同步后时间更新即表示成功</div>
+          <div class="muted small">取"最后同步时间"字段的最大值；点击立即同步后时间更新即表示成功${full ? '' : '（只统计你可见的记录，本人无任务时为空）'}</div>
         </div>
         <div class="widget widget-stat">
-          <div class="widget-h">统计组件 · 未完成任务数</div>
-          <div class="stat">${S.table.length}</div>
-          <div class="muted small">Story ${S.table.filter((r) => r.type === 'Story').length} · Task ${S.table.filter((r) => r.type === 'Task').length} · Bug ${S.table.filter((r) => r.type === 'Bug').length}</div>
+          <div class="widget-h">统计组件 · 未完成任务数${full ? '' : '（本人）'}</div>
+          <div class="stat">${rows.length}</div>
+          <div class="muted small">Story ${rows.filter((r) => r.type === 'Story').length} · Task ${rows.filter((r) => r.type === 'Task').length} · Bug ${rows.filter((r) => r.type === 'Bug').length}</div>
         </div>
         <div class="widget widget-text">
           <div class="widget-h">文本组件 · 视图使用说明</div>
           <ul>
-            <li><b>研发 / 测试</b>：看「我的未完成」，收到 17:00 提醒后点"查看全部"也会打开这里。</li>
-            <li><b>测试</b>：看「按报告人查看」，跟进自己提交的问题。</li>
-            <li><b>项目负责人</b>：看「按人员查看」（含"未对应""未分配"分组）「按项目查看」「状态看板」。</li>
-            <li>表格只保留<b>未完成</b>的 Story / 任务 / 三类 Bug；在 Jira 中完成、移出看板或删除后，下次同步即从表格消失。所有修改请在 Jira 中完成。</li>
+            <li><b>研发 / 测试</b>（阅读者）：只能看到自己作为经办人的任务，看「我的未完成」即可；收到 17:00 提醒后点"查看全部"也会打开这里。</li>
+            <li><b>项目负责人 / TPM</b>（可看全部记录）：看「按人员查看」（含"未对应"分组）「按项目查看」「按报告人查看」「状态看板」。</li>
+            <li>表格只保留看板 22909 范围内<b>未完成</b>的 Story / 任务 / Bug（软件测试）；在 Jira 中完成、移出看板或删除后，下次同步即从表格消失。所有修改请在 Jira 中完成。</li>
+            <li>"立即同步"所有人可用，只更新表格、不发提醒。</li>
           </ul>
         </div>
       </div>`;
@@ -445,9 +458,9 @@
   function renderJira() {
     const list = S.jira.filter((i) => !i.deleted);
     $('#main').innerHTML = `
-      <div class="jira-banner">🧪 <b>模拟 Jira（数据源）</b>：仅用于原型演示，不是本系统的功能。在这里修改任务后，需要等下一次同步（定时或"立即同步"），主表格才会变化。</div>
+      <div class="jira-banner">🧪 <b>模拟 Jira（数据源）</b>：仅用于原型演示，不是本系统的功能。在这里修改任务后，需要等下一次同步（定时或"立即同步"），主表格才会变化。同步范围按看板 22909：VERA 项目的 Story / 任务 + BUGA 项目的 Bug（软件测试），且须有经办人；灰色行不会进入主表格。</div>
       <table class="grid jira"><thead><tr><th>编号</th><th>标题</th><th>Jira 类型</th><th>→ 表格类型</th><th>项目</th><th>经办人</th><th>报告人</th><th>状态</th><th>状态类别</th><th>在看板 22909 中</th><th>创建时间</th><th>最后更新</th><th></th></tr></thead><tbody>
-      ${list.map((i) => { const tt = jtype(i.jiraType).table; const c = catOf(i.jiraType, i.status); return `<tr class="${c === 'done' || !i.inBoard || !tt ? 'dim' : ''}">
+      ${list.map((i) => { const tt = jtype(i.jiraType).table; const c = catOf(i.jiraType, i.status); return `<tr class="${c === 'done' || !i.inBoard || !i.assignee || !tt ? 'dim' : ''}">
         <td>${esc(i.key)}</td><td>${esc(i.title)}</td><td>${esc(i.jiraType)}</td>
         <td>${tt ? `<span class="tag tag-${tt.toLowerCase()}">${tt}</span>` : '<span class="muted">不入表</span>'}</td><td>${esc(i.project)}</td>
         <td><select data-edit="assignee" data-key="${i.key}"><option value="" ${!i.assignee ? 'selected' : ''}>（未分配）</option>${M.jiraUsers.map((u) => `<option value="${u.acc}" ${u.acc === i.assignee ? 'selected' : ''}>${esc(u.name)}</option>`).join('')}</select></td>
@@ -515,8 +528,7 @@
     const a = t.dataset.act;
     e.preventDefault();
     if (a === 'manualSync') {
-      // 03 Q2：后端校验点击人是否为朱卓 / 胡桓康，不符合则忽略
-      if (!TABLE_ADMINS.includes(S.role)) { toast('按钮可选范围仅限朱卓、胡桓康；其他人点击将被忽略', 'warn'); return; }
+      // 需求 v1.5 / V2：立即同步所有人可用，后端不校验点击人
       const now = new Date();
       const hh = String(now.getHours()).padStart(2, '0'), mm = String(now.getMinutes()).padStart(2, '0');
       doSync('手动同步', `${hh}:${mm}`);
@@ -541,7 +553,8 @@
       const title = $('#nTitle').value.trim(); if (!title) { toast('请输入标题', 'warn'); return; }
       const n = 400 + S.jira.length;
       const jt = $('#nType').value;
-      S.jira.push({ key: 'VERA2506M-' + n, title, jiraType: jt, project: 'VERA2506M', assignee: $('#nAssignee').value || null, reporter: 'zhuzhuo', status: (wfOf(jt)[0] || {}).name || '待办', priority: '中', created: `${S.date} 10:00`, updated: `${S.date} 10:00`, inBoard: true });
+      const proj = jt === 'Bug（软件测试）' ? 'BUGA2506M' : 'VERA2506M';   // D1：Bug 位于 BUGA 项目
+      S.jira.push({ key: proj + '-' + n, title, jiraType: jt, project: proj, assignee: $('#nAssignee').value || null, reporter: 'zhuzhuo', status: (wfOf(jt)[0] || {}).name || '待办', priority: '中', created: `${S.date} 10:00`, updated: `${S.date} 10:00`, inBoard: true });
       toast('已在 Jira 中新建（下次同步后出现在主表格）', 'ok');
     } else if (a === 'reset') { location.reload(); return; }
     render();
