@@ -155,3 +155,19 @@ main { flex: 1; min-width: 0; padding: 16px 20px; overflow: auto; }
 .tag-unmapped { display: inline-block; padding: 0 6px; border-radius: 4px; font-size: 11px; background: #fff3e8; color: #de7802; border: 1px solid #ffd8b0; margin-left: 2px; }
 /* Q7：手动同步结果显示至下一次手动同步 */
 .result-note { margin-left: auto; font-size: 12px; }
+
+/* 03 Q1：未对应 / 未分配的文本弱化显示 */
+.text-weak { color: #8f959e; }
+/* 03 Q2：主表格内 数据表 / 仪表盘 切换 */
+.subtabs { display: flex; gap: 4px; margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+.subtabs button { border: none; background: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+.subtabs button.active { background: var(--blue-l); color: var(--blue); font-weight: 600; }
+/* 仪表盘组件 */
+.dash { display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 12px; }
+.widget { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.widget-h { font-size: 12px; color: var(--muted); }
+.widget-text { grid-column: 1 / -1; }
+.widget-text ul { margin: 0; padding-left: 20px; font-size: 13px; }
+.stat { font-size: 30px; font-weight: 700; color: var(--text); }
+.btn-lg { height: 40px; font-size: 15px; padding: 0 20px; align-self: flex-start; }
+.small { font-size: 12px; }
