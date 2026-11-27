@@ -10,7 +10,7 @@ import java.util.Map;
 /** EXT-F02～F05：多维表格记录的查询与批量增改删（分页 / 分批）。 */
 public class BitableClient {
     static final int PAGE_SIZE = 500;
-    static final int BATCH_SIZE = 500;
+    static final int BATCH_SIZE = 100;   // 含描述 / 评论后单行较大，按 100 行一批，避免请求体过大
 
     public record Record(String recordId, JsonNode fields) {}
 

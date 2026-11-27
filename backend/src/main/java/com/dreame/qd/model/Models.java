@@ -43,9 +43,21 @@ public final class Models {
 
     public record JiraUser(String account, String displayName, String email) {}
 
+    /** Jira 评论（正文已转为纯文本）。 */
+    public record JiraComment(String author, Instant created, String text) {}
+
     public record JiraIssue(String key, String summary, String typeName, String projectKey,
                             JiraUser assignee, JiraUser reporter, String statusName,
-                            String statusCategoryKey, String priority, Instant created, Instant updated) {}
+                            String statusCategoryKey, String priority, Instant created, Instant updated,
+                            String description, List<JiraComment> comments) {
+        /** 不含描述 / 评论的简化构造（测试与不关心这两项的场景）。 */
+        public JiraIssue(String key, String summary, String typeName, String projectKey, JiraUser assignee,
+                         JiraUser reporter, String statusName, String statusCategoryKey, String priority,
+                         Instant created, Instant updated) {
+            this(key, summary, typeName, projectKey, assignee, reporter, statusName, statusCategoryKey, priority,
+                    created, updated, "", List.of());
+        }
+    }
 
     /** 账号对应结果。displayText 如 "孙伟（未对应）"。 */
     public record PersonRef(JiraUser jiraUser, String feishuOpenId, String displayText, boolean mapped) {}
@@ -54,10 +66,18 @@ public final class Models {
     public record TaskRow(String recordId, String key, String title, TaskType type, String project,
                           String assigneeOpenId, String assigneeDisplay, String reporter, String status,
                           StatusCategory category, String priority, Instant created, Instant updated,
-                          Instant syncedAt) {
+                          Instant syncedAt, String description, String comments) {
+        /** 不含描述 / 评论的构造（从表格读回现有行时只需要键与记录 ID）。 */
+        public TaskRow(String recordId, String key, String title, TaskType type, String project,
+                       String assigneeOpenId, String assigneeDisplay, String reporter, String status,
+                       StatusCategory category, String priority, Instant created, Instant updated, Instant syncedAt) {
+            this(recordId, key, title, type, project, assigneeOpenId, assigneeDisplay, reporter, status, category,
+                    priority, created, updated, syncedAt, null, null);
+        }
+
         public TaskRow withRecordId(String id) {
             return new TaskRow(id, key, title, type, project, assigneeOpenId, assigneeDisplay, reporter,
-                    status, category, priority, created, updated, syncedAt);
+                    status, category, priority, created, updated, syncedAt, description, comments);
         }
     }
 

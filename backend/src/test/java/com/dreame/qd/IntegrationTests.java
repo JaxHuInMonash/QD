@@ -113,6 +113,27 @@ class IntegrationTests {
     }
 
     @Test
+    void jiraReadsRenderedDescriptionAndComments() {
+        String issue = "{\"key\":\"VERA-9\",\"fields\":{\"summary\":\"s\",\"issuetype\":{\"name\":\"Story\"},\"project\":{\"key\":\"VERA\"},"
+                + "\"assignee\":null,\"reporter\":null,\"status\":{\"name\":\"开发中\",\"statusCategory\":{\"key\":\"new\"}},\"priority\":null,"
+                + "\"created\":\"2026-10-08T10:12:00.000+0800\",\"updated\":\"2026-11-24T18:30:00.000+0800\","
+                + "\"description\":\"h2. 原始标记\","
+                + "\"comment\":{\"comments\":[{\"author\":{\"name\":\"a\",\"displayName\":\"甲\"},\"created\":\"2026-11-20T10:05:00.000+0800\",\"body\":\"*raw1*\"},"
+                + "{\"author\":{\"name\":\"b\"},\"created\":\"2026-11-21T10:05:00.000+0800\",\"body\":\"raw2\"}]}},"
+                + "\"renderedFields\":{\"description\":\"<p>渲染描述</p>\",\"comment\":{\"comments\":[{\"body\":\"<p><b>评论一</b></p>\"}]}}}";
+        handler = path -> new Resp(200, "{\"total\":1,\"issues\":[" + issue + "]}");
+        JiraIssue i = jira().fetchUnfinishedIssues().get(0);
+        assertThat(i.description()).isEqualTo("渲染描述");
+        assertThat(i.comments()).hasSize(2);
+        assertThat(i.comments().get(0).author()).isEqualTo("甲");
+        assertThat(i.comments().get(0).text()).isEqualTo("评论一");                 // 渲染后的 HTML 转纯文本
+        assertThat(i.comments().get(0).created()).isEqualTo(Instant.parse("2026-11-20T02:05:00Z"));
+        assertThat(i.comments().get(1).author()).isEqualTo("b");                  // 无显示名退回登录名
+        assertThat(i.comments().get(1).text()).isEqualTo("raw2");                 // 没有渲染结果时退回原文
+        assertThat(requests.get(0)).contains("description,comment").contains("expand=renderedFields");
+    }
+
+    @Test
     void jiraMapsStatusCodesToErrorCodes() {
         record Case(int status, ErrorCode code, boolean retryable, String... headers) {}
         List<Case> cases = List.of(new Case(401, ErrorCode.JIRA_AUTH, false), new Case(403, ErrorCode.JIRA_FORBIDDEN, false),
@@ -240,7 +261,9 @@ class IntegrationTests {
         assertThat(f.path("经办人").get(0).path("id").asText()).isEqualTo("ou_a");
         assertThat(f.path("状态类别").asText()).isEqualTo("待办");
         assertThat(f.path("创建时间").asLong()).isEqualTo(t.toEpochMilli());
-        assertThat(f.size()).isEqualTo(13);                               // 恰好 13 个字段，不多不少
+        assertThat(f.size()).isEqualTo(15);                               // 13 个原字段 + 描述 + 评论，不多不少
+        assertThat(f.path("描述").asText()).isEmpty();                    // 无描述写空串（更新时用于清空）
+        assertThat(f.path("评论").asText()).isEmpty();
 
         JsonNode update = mapper.readTree(bodies.get(2)).path("records").get(0);
         assertThat(update.path("record_id").asText()).isEqualTo("recX");

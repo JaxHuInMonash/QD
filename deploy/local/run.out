@@ -1,12 +1,27 @@
-2026-11-27 11:21:59.198 INFO  [main] c.d.q.QdAssistantApplication - Starting QdAssistantApplication v0.1.0 using Java 25.0.5.1 with PID 37180 (D:\QD\backend\target\qd-assistant-0.1.0.jar started by magiclab in D:\QD\deploy\local)
-2026-11-27 11:21:59.201 INFO  [main] c.d.q.QdAssistantApplication - No active profile set, falling back to 1 default profile: "default"
-2026-11-27 11:22:00.008 INFO  [main] c.d.q.c.AppConfig - 同步将同时写入副本表格（我的未完成任务）：tblPPRpQa8MMZHKK
-2026-11-27 11:22:00.163 INFO  [main] c.d.q.QdAssistantApplication - Started QdAssistantApplication in 1.565 seconds (process running for 1.903)
-2026-11-27 11:22:00.519 INFO  [main] c.d.q.t.LongConnectionListener - 飞书长连接已启动（App ID cli_ab8f80e2a9b99cf7）
-2026-11-27 11:22:00.525 INFO  [main] c.d.q.c.AppConfig - QD助手已启动：同步 [09:00, 16:50]，提醒 17:00，补发截止 20:00
-2026-11-27 11:22:00.684 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Listener - connected to wss://msg-frontier.feishu.cn/ws/v2?fpid=493&aid=552564&device_id=7712686288923380936&access_key=314a9e798673d47b57d963a8af96259a&service_id=33554678&ticket=c868ad2f-cd2a-4b04-9a7e-51cbdc736725 [conn_id=7712686288923380936]
+2026-11-27 15:01:14.912 INFO  [main] c.d.q.QdAssistantApplication - Starting QdAssistantApplication v0.1.0 using Java 25.0.5.1 with PID 21444 (D:\QD\backend\target\qd-assistant-0.1.0.jar started by magiclab in D:\QD\deploy\local)
+2026-11-27 15:01:14.917 INFO  [main] c.d.q.QdAssistantApplication - No active profile set, falling back to 1 default profile: "default"
+2026-11-27 15:01:16.109 INFO  [main] c.d.q.c.AppConfig - 同步将同时写入副本表格（我的未完成任务）：tblPPRpQa8MMZHKK
+2026-11-27 15:01:16.337 INFO  [main] c.d.q.QdAssistantApplication - Started QdAssistantApplication in 2.368 seconds (process running for 2.831)
+2026-11-27 15:01:16.812 INFO  [main] c.d.q.t.LongConnectionListener - 飞书长连接已启动（App ID cli_ab8f80e2a9b99cf7）
+2026-11-27 15:01:16.828 INFO  [main] c.d.q.c.AppConfig - QD助手已启动：同步 [09:00, 16:50]，提醒 17:00，补发截止 20:00
+2026-11-27 15:01:17.047 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Listener - connected to wss://msg-frontier.feishu.cn/ws/v2?fpid=493&aid=552564&device_id=7712742788462889987&access_key=addf83c4958561d4f7e23adc0b50500b&service_id=33554678&ticket=b058fe20-04df-4b7d-a21e-dcd7247142a0 [conn_id=7712742788462889987]
 WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
 WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.lark.oapi.google.protobuf.UnsafeUtil$MemoryAccessor (jar:nested:/D:/QD/backend/target/qd-assistant-0.1.0.jar/!BOOT-INF/lib/larksuite-oapi-shaded-protobuf-2.4.6.jar!/)
 WARNING: Please consider reporting this to the maintainers of class com.lark.oapi.google.protobuf.UnsafeUtil$MemoryAccessor
 WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
-2026-11-27 11:22:04.103 INFO  [qd-job-1] c.d.q.t.CatchUpRunner - 补执行：当天无错过的定时点
+2026-11-27 15:01:20.491 INFO  [qd-job-1] c.d.q.t.CatchUpRunner - 补执行：当天无错过的定时点
+2026-11-27 15:06:55.577 INFO  [pool-2-thread-6] c.d.q.t.ManualSyncHandler - 收到立即同步请求（messageType=interactive, senderType=user, chat=oc_3be1b5019251ee26e6f41fe22c653e4b）
+2026-11-27 15:07:00.149 INFO  [manual-sync] c.d.q.i.j.HttpJiraClient - Jira 查询完成：共 420 条（跳过 0 条）
+2026-11-27 15:07:17.444 INFO  [manual-sync] c.d.q.s.SyncService - 主表格对齐：新增 0，更新 420，删除 4
+2026-11-27 15:07:33.909 INFO  [manual-sync] c.d.q.s.SyncService - 副本表格 1对齐：新增 0，更新 420，删除 4
+2026-11-27 15:07:33.909 INFO  [manual-sync] c.d.q.s.SyncService - 手动同步完成：420 条未完成任务，耗时 38335 ms
+2026-11-27 15:32:49.737 ERROR [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Listener - java.net.SocketException: Connection reset
+2026-11-27 15:32:49.738 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Client - disconnected to wss://msg-frontier.feishu.cn/ws/v2?fpid=493&aid=552564&device_id=7712742788462889987&access_key=addf83c4958561d4f7e23adc0b50500b&service_id=33554678&ticket=b058fe20-04df-4b7d-a21e-dcd7247142a0 [conn_id=7712742788462889987]
+2026-11-27 15:32:49.738 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Client - start reconnecting...
+2026-11-27 15:33:01.793 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Client - trying to reconnect for the 1st time
+2026-11-27 15:33:02.504 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Listener - connected to wss://msg-frontier.feishu.cn/ws/v2?fpid=493&aid=552564&device_id=7712750944363318261&access_key=1245d335a63bdc1ac745a8703a9392e8&service_id=33554678&ticket=8fe64d1c-b146-4b94-a45c-438f843ddc1c [conn_id=7712750944363318261]
+2026-11-27 15:53:50.613 ERROR [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Listener - java.net.SocketException: Connection reset
+2026-11-27 15:53:50.614 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Client - disconnected to wss://msg-frontier.feishu.cn/ws/v2?fpid=493&aid=552564&device_id=7712750944363318261&access_key=1245d335a63bdc1ac745a8703a9392e8&service_id=33554678&ticket=8fe64d1c-b146-4b94-a45c-438f843ddc1c [conn_id=7712750944363318261]
+2026-11-27 15:53:50.614 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Client - start reconnecting...
+2026-11-27 15:54:10.735 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Client - trying to reconnect for the 1st time
+2026-11-27 15:54:11.022 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Listener - connected to wss://msg-frontier.feishu.cn/ws/v2?fpid=493&aid=552564&device_id=7712756406366227476&access_key=09a8dc2ed29227a16169654c6a18b489&service_id=33554678&ticket=3aa92434-6bcf-4c2f-8f39-409c070c3e46 [conn_id=7712756406366227476]

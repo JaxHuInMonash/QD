@@ -32,6 +32,9 @@ public class BitableTaskTableGateway implements TaskTableGateway {
     static final String F_CREATED = "创建时间";
     static final String F_UPDATED = "最后更新时间";
     static final String F_SYNCED = "最后同步时间";
+    static final String F_DESCRIPTION = "描述";
+    static final String F_COMMENTS = "评论";
+    /** 读取现有行时只需要这些字段；描述 / 评论每次同步整体覆盖写入，读回来没有意义且体积大。 */
     static final List<String> ALL_FIELDS = List.of(F_KEY, F_TITLE, F_TYPE, F_PROJECT, F_ASSIGNEE, F_ASSIGNEE_DISPLAY,
             F_REPORTER, F_STATUS, F_CATEGORY, F_PRIORITY, F_CREATED, F_UPDATED, F_SYNCED);
 
@@ -110,6 +113,8 @@ public class BitableTaskTableGateway implements TaskTableGateway {
         if (r.created() != null) f.put(F_CREATED, r.created().toEpochMilli());
         if (r.updated() != null) f.put(F_UPDATED, r.updated().toEpochMilli());
         if (r.syncedAt() != null) f.put(F_SYNCED, r.syncedAt().toEpochMilli());
+        f.put(F_DESCRIPTION, nz(r.description()));
+        f.put(F_COMMENTS, nz(r.comments()));
         return f;
     }
 

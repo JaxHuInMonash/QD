@@ -2,6 +2,7 @@ package com.dreame.qd.integration.jira;
 
 import com.dreame.qd.config.QdProperties;
 import com.dreame.qd.model.ErrorCode;
+import com.dreame.qd.model.Models.JiraComment;
 import com.dreame.qd.model.Models.JiraIssue;
 import com.dreame.qd.model.Models.JiraUser;
 import com.dreame.qd.model.QdException;
@@ -28,7 +29,7 @@ import org.slf4j.LoggerFactory;
 public class HttpJiraClient implements JiraClient {
     private static final Logger log = LoggerFactory.getLogger(HttpJiraClient.class);
     private static final DateTimeFormatter JIRA_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
-    private static final String FIELDS = "summary,issuetype,project,assignee,reporter,status,priority,created,updated";
+    private static final String FIELDS = "summary,issuetype,project,assignee,reporter,status,priority,created,updated,description,comment";
 
     private final QdProperties.Jira cfg;
     private final HttpClient http;
@@ -55,7 +56,7 @@ public class HttpJiraClient implements JiraClient {
         int skipped = 0;
         while (start < total) {
             String url = base() + "/rest/api/2/search?jql=" + enc(cfg.getBoardJql()) + "&fields=" + FIELDS
-                    + "&startAt=" + start + "&maxResults=" + cfg.getPageSize();
+                    + "&expand=renderedFields&startAt=" + start + "&maxResults=" + cfg.getPageSize();
             JsonNode root = get(url);
             JsonNode issues = root.get("issues");
             if (issues == null || !issues.isArray() || !root.hasNonNull("total")) {
@@ -103,11 +104,44 @@ public class HttpJiraClient implements JiraClient {
             }
             return new JiraIssue(key, text(f, "summary") == null ? "" : text(f, "summary"), type,
                     text(f.path("project"), "key"), user(f.path("assignee")), user(f.path("reporter")), status, cat,
-                    text(f.path("priority"), "name"), parseTime(created), parseTime(updated));
+                    text(f.path("priority"), "name"), parseTime(created), parseTime(updated),
+                    description(n), comments(n));
         } catch (RuntimeException e) {
             log.warn("{}：Issue {} 解析失败：{}", ErrorCode.DATA_MISSING.code(), text(n, "key"), e.getClass().getSimpleName());
             return null;
         }
+    }
+
+    /** 描述：优先用渲染后的 HTML 转纯文本；没有渲染结果时退回原始文本。描述 / 评论解析失败不影响该 Issue 入表。 */
+    private static String description(JsonNode issue) {
+        try {
+            String html = text(issue.path("renderedFields"), "description");
+            if (html != null) return HtmlText.toText(html);
+            String raw = text(issue.path("fields"), "description");
+            return raw == null ? "" : raw;
+        } catch (RuntimeException e) {
+            return "";
+        }
+    }
+
+    private static List<JiraComment> comments(JsonNode issue) {
+        List<JiraComment> out = new ArrayList<>();
+        try {
+            JsonNode raw = issue.path("fields").path("comment").path("comments");
+            JsonNode rendered = issue.path("renderedFields").path("comment").path("comments");
+            for (int i = 0; i < raw.size(); i++) {
+                JsonNode c = raw.get(i);
+                String html = i < rendered.size() ? text(rendered.get(i), "body") : null;
+                String body = html != null ? HtmlText.toText(html) : (text(c, "body") == null ? "" : text(c, "body"));
+                String author = text(c.path("author"), "displayName");
+                if (author == null) author = text(c.path("author"), "name");
+                String created = text(c, "created");
+                out.add(new JiraComment(author == null ? "未知" : author, created == null ? null : parseTime(created), body));
+            }
+        } catch (RuntimeException e) {
+            log.warn("Issue {} 的评论解析失败：{}", text(issue, "key"), e.getClass().getSimpleName());
+        }
+        return out;
     }
 
     static Instant parseTime(String s) {
