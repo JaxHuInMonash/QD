@@ -1,0 +1,29 @@
+2026-11-27 00:55:15.946 INFO  [main] c.d.q.QdAssistantApplication - Starting QdAssistantApplication v0.1.0 using Java 25.0.5.1 with PID 34888 (D:\QD\backend\target\qd-assistant-0.1.0.jar started by magiclab in D:\QD\deploy\local)
+2026-11-27 00:55:15.948 INFO  [main] c.d.q.QdAssistantApplication - No active profile set, falling back to 1 default profile: "default"
+2026-11-27 00:55:16.753 WARN  [main] c.d.q.c.AppConfig - 联调模式：17:00 提醒仅发送给 1 人
+2026-11-27 00:55:16.909 INFO  [main] c.d.q.QdAssistantApplication - Started QdAssistantApplication in 1.517 seconds (process running for 1.861)
+2026-11-27 00:55:17.218 INFO  [main] c.d.q.t.LongConnectionListener - 飞书长连接已启动（App ID cli_ab8f80e2a9b99cf7）
+2026-11-27 00:55:17.223 INFO  [main] c.d.q.c.AppConfig - QD助手已启动：同步 [09:00, 16:50]，提醒 17:00，补发截止 20:00
+2026-11-27 00:55:17.422 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Listener - connected to wss://msg-frontier.feishu.cn/ws/v2?fpid=493&aid=552564&device_id=7712524777219230974&access_key=9dcce97de0a8a31377641e4dddd8c603&service_id=33554678&ticket=a606217d-b779-484a-afb8-7d47a837d9b0 [conn_id=7712524777219230974]
+2026-11-27 00:55:19.183 INFO  [qd-job-1] c.d.q.t.CatchUpRunner - 补执行：当天无错过的定时点
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.lark.oapi.google.protobuf.UnsafeUtil$MemoryAccessor (jar:nested:/D:/QD/backend/target/qd-assistant-0.1.0.jar/!BOOT-INF/lib/larksuite-oapi-shaded-protobuf-2.4.6.jar!/)
+WARNING: Please consider reporting this to the maintainers of class com.lark.oapi.google.protobuf.UnsafeUtil$MemoryAccessor
+WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+2026-11-27 08:57:28.604 ERROR [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Listener - java.net.SocketException: Connection reset
+2026-11-27 08:57:28.604 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Client - disconnected to wss://msg-frontier.feishu.cn/ws/v2?fpid=493&aid=552564&device_id=7712524777219230974&access_key=9dcce97de0a8a31377641e4dddd8c603&service_id=33554678&ticket=a606217d-b779-484a-afb8-7d47a837d9b0 [conn_id=7712524777219230974]
+2026-11-27 08:57:28.606 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Client - start reconnecting...
+2026-11-27 08:57:50.446 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Client - trying to reconnect for the 1st time
+2026-11-27 08:57:55.949 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Listener - connected to wss://msg-frontier.feishu.cn/ws/v2?fpid=493&aid=552564&device_id=7712649119261739967&access_key=60c547f8d147490bd0358fe6b1019845&service_id=33554678&ticket=8d912b6f-2e2e-454c-bfcc-1e3b8b355742 [conn_id=7712649119261739967]
+2026-11-27 08:58:07.030 ERROR [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Listener - java.net.SocketException: Connection reset
+2026-11-27 08:58:07.030 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Client - disconnected to wss://msg-frontier.feishu.cn/ws/v2?fpid=493&aid=552564&device_id=7712649119261739967&access_key=60c547f8d147490bd0358fe6b1019845&service_id=33554678&ticket=8d912b6f-2e2e-454c-bfcc-1e3b8b355742 [conn_id=7712649119261739967]
+2026-11-27 08:58:07.030 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Client - start reconnecting...
+2026-11-27 08:58:10.118 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Client - trying to reconnect for the 1st time
+2026-11-27 08:58:10.159 ERROR [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Client - java.net.NoRouteToHostException: No route to host: getsockopt
+2026-11-27 08:59:40.163 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Client - trying to reconnect for the 2nd time
+2026-11-27 08:59:40.779 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Listener - connected to wss://msg-frontier.feishu.cn/ws/v2?fpid=493&aid=552564&device_id=7712649614813875427&access_key=05ab2c049fc3f338b5bae1e27cad0fea&service_id=33554678&ticket=a47ef35b-b4f7-41bf-b5fe-362fce0428ff [conn_id=7712649614813875427]
+2026-11-27 08:59:51.612 ERROR [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Listener - java.net.SocketException: Connection reset
+2026-11-27 08:59:51.612 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Client - disconnected to wss://msg-frontier.feishu.cn/ws/v2?fpid=493&aid=552564&device_id=7712649614813875427&access_key=05ab2c049fc3f338b5bae1e27cad0fea&service_id=33554678&ticket=a47ef35b-b4f7-41bf-b5fe-362fce0428ff [conn_id=7712649614813875427]
+2026-11-27 08:59:51.612 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Client - start reconnecting...
+2026-11-27 08:59:58.263 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Client - trying to reconnect for the 1st time
+2026-11-27 08:59:58.614 INFO  [OkHttp https://msg-frontier.feishu.cn/...] c.l.oapi.ws.Listener - connected to wss://msg-frontier.feishu.cn/ws/v2?fpid=493&aid=552564&device_id=7712649669688265976&access_key=c91057d216a0c6959b5dc7b3f48c7541&service_id=33554678&ticket=3d8b9aee-18a9-45b2-b679-87e5c0656cd9 [conn_id=7712649669688265976]

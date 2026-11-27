@@ -1,0 +1,50 @@
+spring:
+  main:
+    web-application-type: none
+    banner-mode: off
+
+# 通用配置（不含密钥，可入库）。真实的表格 ID、open_id 等放在运行目录下的 config/application.yml 覆盖（见 deploy/local/config/）。
+# 密钥只来自环境变量：QD_FEISHU_APP_SECRET、QD_JIRA_USERNAME、QD_JIRA_PASSWORD。
+qd:
+  timezone: Asia/Shanghai
+  schedule:
+    sync-times: ["09:00", "16:50"]
+    remind-time: "17:00"
+    remind-catchup-deadline: "20:00"        # 02 Q8
+    calendar-check: "MON 09:00"             # 每年 12 月起，F4.5
+    calendar-check-start: "12-01"
+  jira:
+    base-url: https://jira.dreame.tech
+    # D1：照搬看板 22909 的查询（VERA 项目 Story / 任务 + BUGA 项目 Bug（软件测试），经办人限 4 个用户组），已排除子任务与已完成
+    board-jql: 'category = 10200 AND statusCategory != Done AND ((project IN (VERA2202M, VERA2203M, VERA2307MW, VERA2307M, VERA2409M, VERA2505M, VERA2506M, VERA2507M, VERA2614M, VERA2625M, VERA2626M, VERA2632M, VERA2633M) AND issuetype IN (10001, 10101)) OR (project IN (BUGA2202M, BUGA2203M, BUGA2307MW, BUGA2307M, BUGA2409M, BUGA2505M, BUGA2506M, BUGA2507M, BUGA2614M, BUGA2625M, BUGA2626M, BUGA2632M, BUGA2633M) AND issuetype = 1)) AND (assignee IN membersOf("magic-admin") OR assignee IN membersOf("magic-dev") OR assignee IN membersOf("magic-tpm") OR assignee IN membersOf("magic_devops"))'
+    issue-types:                            # Q4：表格类型 → Jira 类型名
+      Story: ["Story"]
+      Task: ["任务"]
+      Bug: ["Bug（软件测试）"]
+    page-size: 100
+    max-requests-per-minute: 90             # 低于网关限流 100（E5）
+    username: ${QD_JIRA_USERNAME:}
+    password: ${QD_JIRA_PASSWORD:}
+  http:                                     # 04 1.6
+    connect-timeout: 5s
+    read-timeout: 15s
+    retry-interval: 2s
+  feishu:
+    app-id: cli_ab8f80e2a9b99cf7
+    app-secret: ${QD_FEISHU_APP_SECRET:}
+    main:
+      app-token: "<主表格 app_token>"
+      task-table-id: "<未完成任务 table_id>"
+      view-mine-url: "<我的未完成 视图链接>"
+    admin:
+      app-token: "<管理表格 app_token>"
+      exclude-table-id: "<排除名单 table_id>"
+      mapping-table-id: "<例外对应表 table_id>"
+      holiday-table-id: "<节假日日历 table_id>"
+    ops-open-ids: ["<胡桓康 open_id>"]       # 运维负责人
+    backup-open-ids: ["<朱卓 open_id>"]       # 备份负责人
+  storage:
+    state-file: ./data/reminder-state.json
+  logging:
+    dir: ./logs
+    retention-days: 7                       # 02 Q7

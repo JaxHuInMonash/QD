@@ -7,3 +7,11 @@
 目标多维表格：敏捷项目管理（需要调整，删减）
 参考多维表格：【收集表】软硬件功能配置 R5088A/R6001A/R500VH
 story:https://jira.dreame.tech/browse/VERA2506M-251
+
+## 目录
+
+- `docs/`：需求文档与分阶段设计文档（01–06）
+- `prototype/`：可交互原型（演示用）
+- `backend/`：后端服务（Java 21 + Spring Boot 3，Maven）。构建：`cd backend && mvn package`；测试：`mvn test`
+- `deploy/`：部署相关（一期办公电脑运行：`deploy/local/start.ps1`，配置样例见 `deploy/local/config/`、`deploy/.env.example`）
+- `poc/`：技术验证脚本（非业务代码）

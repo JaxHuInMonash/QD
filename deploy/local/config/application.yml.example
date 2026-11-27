@@ -1,0 +1,15 @@
+# 复制为 deploy/local/config/application.yml 后按实际填写（该文件已被 .gitignore 忽略）。
+# 运行目录为 deploy/local 时，Spring Boot 会自动读取 ./config/application.yml 并覆盖内置配置。
+qd:
+  feishu:
+    main:
+      app-token: "<主表格 app_token>"
+      task-table-id: "<未完成任务 table_id>"
+      view-mine-url: "<我的未完成 视图链接>"
+    admin:
+      app-token: "<管理表格 app_token>"
+      exclude-table-id: "<排除名单 table_id>"
+      mapping-table-id: "<例外对应表 table_id>"
+      holiday-table-id: "<节假日日历 table_id>"
+    ops-open-ids: ["ou_ce2d5e6662db0ffb28d283578dece818"]   # 运维负责人：胡桓康
+    backup-open-ids: ["<朱卓 open_id>"]                      # 备份负责人
