@@ -15,10 +15,12 @@ public final class ReminderComposer {
     public static final int MAX_ITEMS = 3;
 
     private final TaskMapper taskMapper;
+    private final String viewMineUrl;
     private final String viewAllUrl;
 
-    public ReminderComposer(TaskMapper taskMapper, String viewAllUrl) {
+    public ReminderComposer(TaskMapper taskMapper, String viewMineUrl, String viewAllUrl) {
         this.taskMapper = taskMapper;
+        this.viewMineUrl = viewMineUrl;
         this.viewAllUrl = viewAllUrl;
     }
 
@@ -31,6 +33,6 @@ public final class ReminderComposer {
                     .map(r -> new ReminderItem(r.key(), taskMapper.browseUrl(r.key()), r.title(), r.status())).toList();
             return new ReminderSection(type, list.size(), items);
         }).toList();
-        return new ReminderMessage(target.openId(), dataAsOf, sections, viewAllUrl);
+        return new ReminderMessage(target.openId(), dataAsOf, sections, viewMineUrl, viewAllUrl);
     }
 }

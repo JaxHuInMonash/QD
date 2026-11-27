@@ -90,13 +90,19 @@ public class AppConfig {
 
     @Bean DailyStateStore dailyStateStore(ObjectMapper mapper) { return new DailyStateStore(Path.of(props.getStorage().getStateFile()), mapper); }
 
-    @Bean ReminderComposer reminderComposer(TaskMapper m) { return new ReminderComposer(m, props.getFeishu().getMain().getViewMineUrl()); }
+    @Bean ReminderComposer reminderComposer(TaskMapper m) { return new ReminderComposer(m, props.getFeishu().getMain().getViewMineUrl(), props.getFeishu().getMain().getViewAllUrl()); }
 
     @Bean AlertService alertService(MessageGateway g, CardBuilder c, Clock clock) { return new AlertService(g, c, props, clock); }
 
     @Bean SyncService syncService(JiraClient jira, ContactGateway contacts, AdminConfigRepository admin, TaskTableGateway table,
-                                  TaskMapper tm, RetryExecutor retry, AlertService alerts, Clock clock) {
-        return new SyncService(jira, contacts, admin, table, tm, retry, alerts, clock);
+                                  BitableClient bitable, TaskMapper tm, RetryExecutor retry, AlertService alerts, Clock clock) {
+        SyncService svc = new SyncService(jira, contacts, admin, table, tm, retry, alerts, clock);
+        String mine = props.getFeishu().getMain().getMineTableId();
+        if (mine != null && !mine.isBlank()) {
+            svc.setMirrors(java.util.List.of(new BitableTaskTableGateway(bitable, props, tm, mine)));
+            log.info("同步将同时写入副本表格（我的未完成任务）：{}", mine);
+        }
+        return svc;
     }
 
     @Bean ReminderService reminderService(TaskTableGateway table, AdminConfigRepository admin, ContactGateway contacts, JiraClient jira,
@@ -110,7 +116,9 @@ public class AppConfig {
 
     @Bean ScheduledJobs scheduledJobs(SyncService sync, ReminderService reminder, AdminConfigRepository admin, AlertService alerts,
                                       DailyStateStore state, Clock clock) {
-        return new ScheduledJobs(sync, reminder, admin, alerts, state, clock, ConfigValidator.parseMonthDay(props.getSchedule().getCalendarCheckStart()));
+        ScheduledJobs jobs = new ScheduledJobs(sync, reminder, admin, alerts, state, clock, ConfigValidator.parseMonthDay(props.getSchedule().getCalendarCheckStart()));
+        jobs.setRemindDeadline(ConfigValidator.parseTime(props.getSchedule().getRemindCatchupDeadline()));
+        return jobs;
     }
 
     @Bean CatchUpRunner catchUpRunner(ScheduledJobs jobs, SyncService sync, ReminderService reminder, DailyStateStore state, Clock clock) {
@@ -144,6 +152,8 @@ public class AppConfig {
             String[] cal = ConfigValidator.parseCalendarCheck(s.getCalendarCheck());
             scheduler.schedule(jobs::runCalendarCheck, cron(cal[1], cal[0]));
             scheduler.execute(catchUp::runOnStartup);
+            // 休眠 / 断网 / 定时器延迟后恢复：每 5 分钟检查一次是否有错过的定时点（首次检查在 5 分钟后）
+            scheduler.scheduleWithFixedDelay(catchUp::runPeriodic, java.time.Instant.now().plus(java.time.Duration.ofMinutes(5)), java.time.Duration.ofMinutes(5));
             log.info("QD助手已启动：同步 {}，提醒 {}，补发截止 {}", s.getSyncTimes(), s.getRemindTime(), s.getRemindCatchupDeadline());
         };
     }

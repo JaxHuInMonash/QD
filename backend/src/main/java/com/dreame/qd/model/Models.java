@@ -87,7 +87,7 @@ public final class Models {
     public record ReminderSection(TaskType type, int total, List<ReminderItem> items) {}
 
     public record ReminderMessage(String receiverOpenId, Instant dataAsOf, List<ReminderSection> sections,
-                                  String viewAllUrl) {}
+                                  String viewMineUrl, String viewAllUrl) {}
 
     public record ReminderResult(boolean success, String code, String message, Instant finishedAt,
                                  int sentCount, int skippedCount, int retriedCount, List<Undelivered> undelivered) {}

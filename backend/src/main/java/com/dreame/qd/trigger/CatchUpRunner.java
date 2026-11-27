@@ -8,8 +8,11 @@ import com.dreame.qd.model.Models.SyncTrigger;
 import com.dreame.qd.service.ReminderService;
 import com.dreame.qd.service.SyncService;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,16 +48,34 @@ public class CatchUpRunner {
         this.deadline = deadline;
     }
 
-    public void runOnStartup() {
+    /** 周期检查时，定时点过后多久才算"错过"，避免与正常定时任务同时执行。 */
+    static final Duration PERIODIC_GRACE = Duration.ofMinutes(3);
+
+    /** 周期检查中已尝试补过的定时点（日期|任务），每个定时点每天只补一次，避免失败时反复重试与反复通知。 */
+    private final Set<String> attempted = ConcurrentHashMap.newKeySet();
+
+    /** 启动补执行：当天已过的定时点立即补。 */
+    public void runOnStartup() { run(Duration.ZERO, false); }
+
+    /** 周期检查（休眠 / 断网 / 定时器延迟后恢复）：定时点已过 3 分钟仍无成功记录则补，每个定时点每天只补一次。 */
+    public void runPeriodic() { run(PERIODIC_GRACE, true); }
+
+    private void run(Duration grace, boolean oncePerPoint) {
         try {
             LocalDate today = LocalDate.now(clock);
             LocalTime now = LocalTime.now(clock);
             if (!jobs.isWorkday(today)) { log.info("补执行：今天不是法定工作日，不补"); return; }
             DailyState s = state.load(today);
-            boolean need0900 = !now.isBefore(sync0900) && !s.runs().containsKey(ScheduledJobs.JOB_SYNC_0900);
-            boolean need1650 = !now.isBefore(sync1650) && !s.runs().containsKey(ScheduledJobs.JOB_SYNC_1650);
-            boolean needRemind = !now.isBefore(remindTime) && now.isBefore(deadline) && !s.runs().containsKey(ScheduledJobs.JOB_REMIND);
-            if (!need0900 && !need1650 && !needRemind) { log.info("补执行：当天无错过的定时点"); return; }
+            boolean need0900 = due(now, sync0900, grace) && !s.runs().containsKey(ScheduledJobs.JOB_SYNC_0900)
+                    && claim(oncePerPoint, today, ScheduledJobs.JOB_SYNC_0900);
+            boolean need1650 = due(now, sync1650, grace) && !s.runs().containsKey(ScheduledJobs.JOB_SYNC_1650)
+                    && claim(oncePerPoint, today, ScheduledJobs.JOB_SYNC_1650);
+            boolean needRemind = due(now, remindTime, grace) && now.isBefore(deadline) && !s.runs().containsKey(ScheduledJobs.JOB_REMIND)
+                    && claim(oncePerPoint, today, ScheduledJobs.JOB_REMIND);
+            if (!need0900 && !need1650 && !needRemind) {
+                if (!oncePerPoint) log.info("补执行：当天无错过的定时点");
+                return;
+            }
 
             log.info("补执行：同步={}，提醒={}", need0900 || need1650 || needRemind, needRemind);
             SyncResult r = syncService.sync(SyncTrigger.CATCH_UP);
@@ -69,5 +90,14 @@ public class CatchUpRunner {
         } catch (Throwable t) {
             log.error("补执行异常：{}", t.toString(), t);
         }
+    }
+
+    private static boolean due(LocalTime now, LocalTime point, Duration grace) {
+        return !now.isBefore(point.plus(grace));
+    }
+
+    /** 周期检查时登记"已尝试"；已登记过返回 false。启动补执行不受限制。 */
+    private boolean claim(boolean oncePerPoint, LocalDate day, String job) {
+        return !oncePerPoint || attempted.add(day + "|" + job);
     }
 }

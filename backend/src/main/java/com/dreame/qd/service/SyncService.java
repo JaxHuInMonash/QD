@@ -122,7 +122,18 @@ public class SyncService {
             taskMapper.toRow(i, assignee, reporter, syncedAt).ifPresent(r -> desired.put(r.key(), r));
         }
 
-        // 与主表格现状对齐
+        align("主表格", table, desired);
+        for (int i = 0; i < mirrors.size(); i++) align("副本表格 " + (i + 1), mirrors.get(i), desired);
+        return desired.size();
+    }
+
+    /** 同一份结果写入副本表格（如"我的未完成任务"，行级权限不同）；任一表格写入失败都按同步失败处理，整体对齐可重入。 */
+    private volatile List<TaskTableGateway> mirrors = List.of();
+
+    public void setMirrors(List<TaskTableGateway> mirrors) { this.mirrors = List.copyOf(mirrors); }
+
+    /** 与指定表格现状按 Issue 编号整体对齐（新增 → 更新 → 删除）。 */
+    private void align(String label, TaskTableGateway table, Map<String, TaskRow> desired) {
         List<TaskRow> existing = table.listAll();
         Map<String, TaskRow> existingByKey = new HashMap<>();
         List<String> deleteIds = new ArrayList<>();
@@ -140,7 +151,6 @@ public class SyncService {
         table.createBatch(toCreate);
         table.updateBatch(toUpdate);
         table.deleteBatch(deleteIds);
-        log.info("主表格对齐：新增 {}，更新 {}，删除 {}", toCreate.size(), toUpdate.size(), deleteIds.size());
-        return desired.size();
+        log.info("{}对齐：新增 {}，更新 {}，删除 {}", label, toCreate.size(), toUpdate.size(), deleteIds.size());
     }
 }

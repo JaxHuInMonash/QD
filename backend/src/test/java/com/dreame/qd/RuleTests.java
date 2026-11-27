@@ -123,7 +123,7 @@ class RuleTests {
         List<TaskRow> tasks = new java.util.ArrayList<>();
         for (int i = 5; i >= 1; i--) tasks.add(row("VERA-" + i, TaskType.STORY, "ou_a", "甲", "2026-10-0" + i + "T00:00:00Z"));
         tasks.add(row("VERA-9", TaskType.TASK, "ou_a", "甲", "2026-10-09T00:00:00Z"));
-        ReminderMessage m = new ReminderComposer(MAPPER, "https://view").compose(new ReminderTarget("ou_a", "甲", tasks), Instant.parse("2026-11-26T08:50:00Z"));
+        ReminderMessage m = new ReminderComposer(MAPPER, "https://mine", "https://view").compose(new ReminderTarget("ou_a", "甲", tasks), Instant.parse("2026-11-26T08:50:00Z"));
         assertThat(m.sections()).extracting(s -> s.type()).containsExactly(TaskType.STORY, TaskType.TASK, TaskType.BUG);
         assertThat(m.sections().get(0).total()).isEqualTo(5);
         assertThat(m.sections().get(0).items()).extracting(i -> i.key()).containsExactly("VERA-1", "VERA-2", "VERA-3"); // 早 → 晚
@@ -131,5 +131,6 @@ class RuleTests {
         assertThat(m.sections().get(2).total()).isZero();                                                              // 0 也显示
         assertThat(m.sections().get(0).items().get(0).url()).isEqualTo("https://jira.example.com/browse/VERA-1");
         assertThat(m.viewAllUrl()).isEqualTo("https://view");
+        assertThat(m.viewMineUrl()).isEqualTo("https://mine");
     }
 }

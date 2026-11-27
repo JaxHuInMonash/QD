@@ -34,6 +34,7 @@ public final class ConfigValidator {
         need(e, f.getMain().getAppToken(), "qd.feishu.main.app-token（主表格 app_token）");
         need(e, f.getMain().getTaskTableId(), "qd.feishu.main.task-table-id（未完成任务 table_id）");
         need(e, f.getMain().getViewMineUrl(), "qd.feishu.main.view-mine-url（我的未完成 视图链接）");
+        need(e, f.getMain().getViewAllUrl(), "qd.feishu.main.view-all-url（全部未完成 视图链接）");
         need(e, f.getAdmin().getAppToken(), "qd.feishu.admin.app-token（管理表格 app_token）");
         need(e, f.getAdmin().getExcludeTableId(), "qd.feishu.admin.exclude-table-id");
         need(e, f.getAdmin().getMappingTableId(), "qd.feishu.admin.mapping-table-id");

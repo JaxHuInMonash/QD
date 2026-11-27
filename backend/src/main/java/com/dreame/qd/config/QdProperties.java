@@ -110,6 +110,13 @@ public class QdProperties {
         public void setAppToken(String v) { this.appToken = v; }
         public String getTaskTableId() { return taskTableId; }
         public void setTaskTableId(String v) { this.taskTableId = v; }
+        /** 可选：副本数据表（"我的未完成任务"，与主表格字段相同，同步时写入同样内容；用于设置不同的行级权限）。为空则不写副本。 */
+        private String mineTableId;
+        public String getMineTableId() { return mineTableId; }
+        public void setMineTableId(String v) { this.mineTableId = v; }
+        private String viewAllUrl;
+        public String getViewAllUrl() { return viewAllUrl; }
+        public void setViewAllUrl(String v) { this.viewAllUrl = v; }
         public String getViewMineUrl() { return viewMineUrl; }
         public void setViewMineUrl(String v) { this.viewMineUrl = v; }
     }

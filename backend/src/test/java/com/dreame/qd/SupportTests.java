@@ -140,6 +140,7 @@ class SupportTests {
         p.getFeishu().getMain().setAppToken("a");
         p.getFeishu().getMain().setTaskTableId("t");
         p.getFeishu().getMain().setViewMineUrl("https://v");
+        p.getFeishu().getMain().setViewAllUrl("https://v2");
         p.getFeishu().getAdmin().setAppToken("a2");
         p.getFeishu().getAdmin().setExcludeTableId("t1");
         p.getFeishu().getAdmin().setMappingTableId("t2");

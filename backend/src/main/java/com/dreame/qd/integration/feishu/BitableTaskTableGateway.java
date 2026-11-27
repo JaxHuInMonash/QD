@@ -39,16 +39,24 @@ public class BitableTaskTableGateway implements TaskTableGateway {
     private final QdProperties.Main cfg;
     private final TaskMapper taskMapper;
 
+    private final String tableId;
+
     public BitableTaskTableGateway(BitableClient client, QdProperties props, TaskMapper taskMapper) {
+        this(client, props, taskMapper, props.getFeishu().getMain().getTaskTableId());
+    }
+
+    /** 指定数据表（主表格或副本表格，字段结构相同）。 */
+    public BitableTaskTableGateway(BitableClient client, QdProperties props, TaskMapper taskMapper, String tableId) {
         this.client = client;
         this.cfg = props.getFeishu().getMain();
         this.taskMapper = taskMapper;
+        this.tableId = tableId;
     }
 
     @Override
     public List<TaskRow> listAll() {
         List<TaskRow> out = new ArrayList<>();
-        for (Record r : client.searchAll(cfg.getAppToken(), cfg.getTaskTableId(), ALL_FIELDS)) {
+        for (Record r : client.searchAll(cfg.getAppToken(), tableId, ALL_FIELDS)) {
             JsonNode f = r.fields();
             String key = BitableClient.text(f.get(F_KEY));
             if (key == null || key.isBlank()) {
@@ -69,20 +77,20 @@ public class BitableTaskTableGateway implements TaskTableGateway {
     @Override
     public void createBatch(List<TaskRow> rows) {
         if (rows.isEmpty()) return;
-        client.batchCreate(cfg.getAppToken(), cfg.getTaskTableId(), rows.stream().map(r -> fields(r, false)).toList());
+        client.batchCreate(cfg.getAppToken(), tableId, rows.stream().map(r -> fields(r, false)).toList());
     }
 
     @Override
     public void updateBatch(List<TaskRow> rows) {
         if (rows.isEmpty()) return;
-        client.batchUpdate(cfg.getAppToken(), cfg.getTaskTableId(),
+        client.batchUpdate(cfg.getAppToken(), tableId,
                 rows.stream().map(r -> Map.<String, Object>of("record_id", r.recordId(), "fields", fields(r, true))).toList());
     }
 
     @Override
     public void deleteBatch(List<String> recordIds) {
         if (recordIds.isEmpty()) return;
-        client.batchDelete(cfg.getAppToken(), cfg.getTaskTableId(), recordIds);
+        client.batchDelete(cfg.getAppToken(), tableId, recordIds);
     }
 
     /** 写入值格式见 03 2.1：超链接对象、人员 open_id、日期毫秒时间戳。更新时对应不上的经办人写空数组以清空。 */

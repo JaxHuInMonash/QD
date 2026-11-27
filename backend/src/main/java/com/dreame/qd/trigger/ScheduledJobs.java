@@ -13,6 +13,7 @@ import com.dreame.qd.service.ReminderService;
 import com.dreame.qd.service.SyncService;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.MonthDay;
 import java.util.List;
 import org.slf4j.Logger;
@@ -46,6 +47,11 @@ public class ScheduledJobs {
         this.calendarCheckStart = calendarCheckStart;
     }
 
+    private LocalTime remindDeadline;
+
+    /** 提醒截止时间：定时器延迟到此之后才触发的 17:00 提醒不再发送（默认不限制）。 */
+    public void setRemindDeadline(LocalTime deadline) { this.remindDeadline = deadline; }
+
     public void runSync0900() { runSync(SyncTrigger.SCHEDULED_0900, JOB_SYNC_0900); }
 
     public void runSync1650() { runSync(SyncTrigger.SCHEDULED_1650, JOB_SYNC_1650); }
@@ -65,6 +71,10 @@ public class ScheduledJobs {
         try {
             LocalDate today = today();
             if (!isWorkday(today)) { log.info("17:00 提醒：今天不是法定工作日，跳过"); return; }
+            if (remindDeadline != null && !LocalTime.now(clock).isBefore(remindDeadline)) {
+                log.warn("17:00 提醒触发过晚（已过截止时间 {}，可能是休眠后定时器延迟），不发送", remindDeadline);
+                return;
+            }
             ReminderResult r = reminderService.sendDailyReminders(today, false);
             if (r.success()) state.markRun(today, JOB_REMIND, clock.instant());
         } catch (Throwable t) {

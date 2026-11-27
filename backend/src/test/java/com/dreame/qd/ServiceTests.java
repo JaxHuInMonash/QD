@@ -328,7 +328,7 @@ class ServiceTests {
     }
 
     ReminderService reminderService(DailyStateStore state) {
-        return new ReminderService(table, admin, contacts, jira, new ReminderComposer(taskMapper, "https://view"),
+        return new ReminderService(table, admin, contacts, jira, new ReminderComposer(taskMapper, "https://mine", "https://view"),
                 new CardBuilder(mapper, ZONE), messages, state, retry, alerts, clock);
     }
 
@@ -423,5 +423,78 @@ class ServiceTests {
         catchUp(state, Clock.fixed(Instant.parse("2026-11-28T10:30:00Z"), ZONE)).runOnStartup();   // 周六
         catchUp(state, Clock.fixed(Instant.parse("2026-11-26T00:30:00Z"), ZONE)).runOnStartup();   // 周四 08:30，尚未到 09:00
         assertThat(jira.calls).isZero();
+    }
+
+    @Test
+    void periodicCatchUpWaitsForGraceThenCatchesUp(@TempDir Path dir) {
+        DailyStateStore state = new DailyStateStore(dir.resolve("s.json"), mapper);
+        jira.issues = List.of(issue("A-1", "Story", user("a", "甲")));
+        catchUp(state, Clock.fixed(Instant.parse("2026-11-26T01:02:00Z"), ZONE)).runPeriodic();    // 09:02，未满 3 分钟
+        assertThat(jira.calls).isZero();
+        catchUp(state, Clock.fixed(Instant.parse("2026-11-26T01:05:00Z"), ZONE)).runPeriodic();    // 09:05，补同步
+        assertThat(jira.calls).isEqualTo(1);
+        assertThat(state.load(LocalDate.of(2026, 11, 26)).runs()).containsKey("sync0900");
+        assertThat(messages.sent).isEmpty();                                                      // 还没到 17:00，不提醒
+    }
+
+    @Test
+    void periodicCatchUpRemindsAfterMissedSeventeen(@TempDir Path dir) {
+        DailyStateStore state = new DailyStateStore(dir.resolve("s.json"), mapper);
+        jira.issues = List.of(issue("A-1", "Story", user("a", "甲")));
+        CatchUpRunner runner = catchUp(state, Clock.fixed(Instant.parse("2026-11-26T09:10:00Z"), ZONE));   // 17:10
+        runner.runPeriodic();
+        assertThat(messages.to("ou_a")).hasSize(1);
+        runner.runPeriodic();                                                                     // 已有成功记录，不重复
+        assertThat(messages.to("ou_a")).hasSize(1);
+        assertThat(jira.calls).isEqualTo(1);
+    }
+
+    @Test
+    void periodicCatchUpTriesEachPointOnlyOnceEvenIfItFails(@TempDir Path dir) {
+        DailyStateStore state = new DailyStateStore(dir.resolve("s.json"), mapper);
+        jira.failures.add(new QdException(ErrorCode.JIRA_AUTH, false, "401"));
+        CatchUpRunner runner = catchUp(state, Clock.fixed(Instant.parse("2026-11-26T02:00:00Z"), ZONE));   // 10:00
+        runner.runPeriodic();                                                                     // 失败
+        runner.runPeriodic();                                                                     // 不再反复重试、不反复通知
+        assertThat(jira.calls).isEqualTo(1);
+        // 启动补执行不受此限制
+        runner.runOnStartup();
+        assertThat(jira.calls).isEqualTo(2);
+    }
+
+    @Test
+    void lateScheduledReminderAfterDeadlineIsNotSent(@TempDir Path dir) {
+        DailyStateStore state = new DailyStateStore(dir.resolve("s.json"), mapper);
+        jira.issues = List.of(issue("A-1", "Story", user("a", "甲")));
+        Clock late = Clock.fixed(Instant.parse("2026-11-26T15:00:00Z"), ZONE);                    // 23:00，定时器因休眠延迟
+        ScheduledJobs jobs = new ScheduledJobs(sync, reminderService(state), admin, alerts, state, late, MonthDay.of(12, 1));
+        jobs.setRemindDeadline(LocalTime.of(20, 0));
+        jobs.runRemind1700();
+        assertThat(messages.sent).isEmpty();
+    }
+
+    @Test
+    void syncAlsoAlignsMirrorTables() {
+        jira.issues = List.of(issue("A-1", "Story", user("a", "甲")), issue("A-2", "Story", user("b", "乙")));
+        FakeTable mirror = new FakeTable();
+        mirror.rows.add(RuleTests.row("OLD-1", com.dreame.qd.model.Models.TaskType.STORY, "ou_a", "甲", "2026-10-01T00:00:00Z").withRecordId("recOld"));
+        sync.setMirrors(List.of(mirror));
+        SyncResult r = sync.sync(SyncTrigger.MANUAL);
+        assertThat(r.success()).isTrue();
+        assertThat(table.rows).extracting(TaskRow::key).containsExactlyInAnyOrder("A-1", "A-2");
+        assertThat(mirror.rows).extracting(TaskRow::key).containsExactlyInAnyOrder("A-1", "A-2");   // 副本同样对齐，旧行被删除
+        assertThat(mirror.deleted).containsExactly("recOld");
+    }
+
+    @Test
+    void mirrorWriteFailureIsReportedAsSyncFailure() {
+        jira.issues = List.of(issue("A-1", "Story", user("a", "甲")));
+        FakeTable mirror = new FakeTable() {
+            @Override public void createBatch(List<TaskRow> r) { throw new QdException(ErrorCode.FEISHU_FORBIDDEN, false, "无权限"); }
+        };
+        sync.setMirrors(List.of(mirror));
+        SyncResult r = sync.sync(SyncTrigger.MANUAL);
+        assertThat(r.success()).isFalse();
+        assertThat(messages.to("ou_ops")).isNotEmpty();                                            // 运维收到失败通知
     }
 }

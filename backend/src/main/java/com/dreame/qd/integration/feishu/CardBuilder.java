@@ -44,7 +44,10 @@ public class CardBuilder {
         }
         els.addObject().put("tag", "hr");
         StringBuilder foot = new StringBuilder();
-        if (m.viewAllUrl() != null && !m.viewAllUrl().isBlank()) foot.append("[查看全部 → 我的未完成](").append(m.viewAllUrl()).append(")\n");
+        java.util.List<String> links = new java.util.ArrayList<>();
+        if (m.viewAllUrl() != null && !m.viewAllUrl().isBlank()) links.add("[全部未完成](" + m.viewAllUrl() + ")");
+        if (m.viewMineUrl() != null && !m.viewMineUrl().isBlank()) links.add("[我的未完成](" + m.viewMineUrl() + ")");
+        if (!links.isEmpty()) foot.append("查看：").append(String.join("　|　", links)).append("\n");
         foot.append("<font color='grey'>数据截至 ").append(m.dataAsOf() == null ? "—" : format(m.dataAsOf())).append("</font>");
         md(els, foot.toString());
         return card("blue", "📋 Jira 待更新提醒", els);

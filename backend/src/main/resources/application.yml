@@ -36,6 +36,7 @@ qd:
       app-token: "<主表格 app_token>"
       task-table-id: "<未完成任务 table_id>"
       view-mine-url: "<我的未完成 视图链接>"
+      view-all-url: "<全部未完成 视图链接>"
     admin:
       app-token: "<管理表格 app_token>"
       exclude-table-id: "<排除名单 table_id>"
